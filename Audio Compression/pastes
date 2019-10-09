@@ -1,0 +1,48 @@
+{
+	SNDFILE *infile;
+	SNDFILE *outfile;
+	SF_INFO info;
+	infile = sf_open(infilename, SFM_READ, &info);
+
+	int frames = info.frames;
+	int channels = info.channels;
+	int num_items = frames * channels;
+	print_wav_headers(&info);
+
+	double * samples = (double *) (malloc(num_items * sizeof(double)));
+	double * decimated_samples = (double *) (malloc(
+			frames * decimate_factor * sizeof(double)));
+
+	sf_read_double(infile, samples, num_items);
+
+	for (int i = 0; i < frames; i++) {
+
+		if (i % decimate_factor == 0) {
+			decimated_samples[i] = 0;
+			decimated_samples[i] += samples[i];
+		} else {
+			decimated_samples[i] = 0;
+		}
+	}
+
+	for (int i = 0; i < frames; i++) {
+
+		if (decimated_samples[i] == 0) {
+			if (i != 0 && i != frames - 1) {
+				double left = decimated_samples[i - 1];
+				double right = decimated_samples[i + 1];
+
+				decimated_samples[i] = (left + right) / 2;
+			}
+		}
+	}
+	info.frames *= decimate_factor;
+	//info.samplerate*=decimate_factor;
+
+	outfile = sf_open(outfilename, SFM_WRITE, &info);
+	sf_write_double(outfile, decimated_samples, frames);
+
+	sf_close(infile);
+	sf_close(outfile);
+
+}
